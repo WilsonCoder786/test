@@ -6,6 +6,10 @@ const userModel = require("../Model/userModel");
 const nodemailer = require("nodemailer");
 const { check_missing_fields } = require("../helper/common_function");
 const { ProfileValidator } = require("../Validator/ProfileValidate");
+const profileModel = require("../Model/profileModel");
+
+
+const otpStorage = {};
 
 
 //create Account
@@ -13,7 +17,6 @@ exports.createUser = async (req, res) => {
     try {
 
         await AuthValidator.validateAsync(req.body);
-        console.log("test")
 
         const otp = Math.floor(100000 + Math.random() * 900000);
 
@@ -35,7 +38,7 @@ exports.createUser = async (req, res) => {
                 otp: otp,
             })
             await newUser.save(); // Manually validate the item
-            console.log("hello")
+
 
             const token = jwt.sign({ userId: newUser._id }, 'user_sckeret', { expiresIn: '1h' });
 
@@ -63,14 +66,14 @@ exports.createUser = async (req, res) => {
                     console.log("Error in sending Mail", err);
                 }
                 else {
-                    console.log("Mail sent successfully", info);
+                    // console.log("Mail sent successfully", info);
                 }
             })
 
             return res.status(200).json({
                 message: "Add New User",
                 data: newUser,
-                token: `Bearer ${token}`
+                token: `${token}`
             });
         }
     }
@@ -132,6 +135,16 @@ exports.verifyOtp = async (req, res) => {
                 await userFind.updateOne({
                     isVerify: true
                 })
+
+                const newToken = jwt.sign({ userId: req.userId }, 'user_sckeret', {
+                    expiresIn: '1h' // Token validity duration (change as needed)
+                });
+
+
+
+                return res.status(200).json({ message: 'Verify OTP successfully', token: newToken });
+
+
             }
             else {
                 return res.status(401).json({ message: 'Invalid Otp' });
@@ -148,8 +161,49 @@ exports.verifyOtp = async (req, res) => {
 //complete Profile
 exports.completeProfile = async (req, res) => {
     try {
-        await ProfileValidator.validateAsync(req.body);
 
+        const { body, headers } = req
+        const { authorization } = headers
+        console.log(authorization)
+
+
+        await ProfileValidator.validateAsync(body);
+
+        jwt.verify(authorization, 'user_sckeret', async (err, decoded) => {
+            if (err) {
+                return res.status(401).json({ message: 'Failed to authenticate token' });
+            }
+
+            // You can access the user's ID in decoded.userId
+            req.userId = decoded.userId;
+            console.log(req.userId)
+
+
+            const Complete_Profile = new profileModel({
+                firstName: body.firstName,
+                lastName: body.lastName,
+                dateOfBirth: body.dateOfBirth,
+                gender: body.gender,
+                profileImage: req.file.path
+
+            })
+
+            var profiledata = await Complete_Profile.save(body)
+
+
+
+            await userModel.findByIdAndUpdate(req.userId, {
+                isCompleteProfile: true,
+                profileId: profiledata._id
+            })
+
+
+        })
+
+        return res.status(200).json({
+            message: "USER COMPLETED PROFILE SUCCESSFULLY",
+
+        });
     }
     catch (e) {
         return res.status(500).json({
@@ -159,3 +213,90 @@ exports.completeProfile = async (req, res) => {
     }
 }
 
+//Forgot Password Api
+exports.forgotPassword = async (req, res) => {
+
+    const { email } = req.body;
+
+    if (email) {
+
+        let ckeckUser = await userModel.findOne({email})
+        if(ckeckUser==null){
+            return res.status(401).json({ message: ' Invalid Email Address' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        const otpExpiration = new Date();
+        otpExpiration.setMinutes(otpExpiration.getMinutes() + 15);
+        otpStorage[email] = { otp, expiration: otpExpiration };
+        console.log(otpStorage[email])
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "mzhassan444@gmail.com",
+                pass: "ucqbkugmlvklkqgo"
+            }
+        })
+
+        const info = {
+            from: "mzhassan444@gmail.com",
+            to: email,
+            subject: "Welcome to Your App - Forgot Password Otp Verification",
+            html: `
+                <h1>Forgot Password Otp Verification</h1>
+                <p>Welcome to Your App! Please use the OTP below to verify your Forgot Password Otp Verification.</p>
+                <p>Your OTP code is: ${otp}</p>
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTX4dSRdBCz6erQsHv_W3hltQFBIp-hDQF4mg&usqp=CAU" alt="Image Alt Text">
+            `,
+        };
+        transporter.sendMail(info, (err, result) => {
+            if (err) {
+                // console.log("Error in sending Mail", err);
+                return res.status(401).json({ message: 'Error in sending Mail' });
+
+            }
+            else {
+                // console.log("Mail sent successfully", info);
+                return res.status(200).json({ message: 'Otp Send On Email' });
+            }
+        })
+
+    }
+    else {
+        return res.status(401).json({ message: 'Enter Email Address' });
+    }
+
+
+
+
+
+}
+
+
+exports.PasswordOtpVerify =async(req,res)=>{
+    const { email, otp, newPassword } = req.body;
+    // console.log(otpStorage[ ])
+
+    if (otpStorage[email] && otpStorage[email].otp === otp && new Date() < new Date(otpStorage[email].expiration)) {
+
+      const User = require('../Model/userModel'); // Replace with your actual model import
+  
+      User.findOne({ email: email }, (err, user) => {
+        if (err || !user) {
+          res.status(401).json({ message: 'User not found' });
+        } else {
+          // Set the new password (assuming you have a setPassword method in your model)
+          user.setPassword(newPassword, (err) => {
+            if (err) {
+              res.status(500).json({ message: 'Failed to update password' });
+            } else {
+              res.json({ message: 'Password updated successfully' });
+            }
+          });
+        }
+      });
+    } else {
+      res.status(401).json({ message: 'Invalid OTP' });
+    }
+}

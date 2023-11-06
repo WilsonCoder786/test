@@ -21,11 +21,12 @@ const AuthValidator = Joi.object({
     'number.empty': `Password cannot be empty`,
     'any.required': `Password is required`,
   }),
-  userType:Joi.string().required().messages({
-    'string.base': `Name must be a string`,
-    'string.empty': `Name cannot be empty`,
+  userType: Joi.string().valid('admin', 'user').required().messages({
+    'string.base': 'User Type must be a string',
+    'string.empty': 'User Type cannot be empty',
+    'any.only': 'User Type must be one of "admin", "user", or "guest"',
   })
-  
+
   // image: Joi.object({
   //   fieldname: Joi.string().valid('image').required(),
   //   originalname: Joi.string().required(),

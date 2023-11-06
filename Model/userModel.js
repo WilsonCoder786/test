@@ -15,17 +15,27 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    userType:{
-        type:String,
-        required:true
+    userType: {
+        type: String,
+        required: true
     },
-    isVerify:{
-        type :  Boolean,
-        default : false
+    isVerify: {
+        type: Boolean,
+        default: false
     },
-    otp:{
-        type:Number,
-        default:0
+    isCompleteProfile: {
+        type: Boolean,
+        default: false
+    },
+    profileId: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: "users-profile",
+        required: false,
+    },
+
+    otp: {
+        type: Number,
+        default: 0
     }
 
 

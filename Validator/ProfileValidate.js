@@ -6,7 +6,7 @@ const ProfileValidator = Joi.object({
     lastName: Joi.string().min(2).max(50).required(),
     dateOfBirth: Joi.date().required(),
     gender: Joi.string().valid('male', 'female', 'other').required(),
-    profileImage: Joi.string().required()
+
 })
 
 module.exports = { ProfileValidator }
