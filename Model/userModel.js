@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
     },
     profileId: {
         type: mongoose.Schema.Types.ObjectId,
-        refPath: "users-profile",
+        ref: 'users-profile',
         required: false,
     },
 

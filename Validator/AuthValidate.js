@@ -16,10 +16,11 @@ const AuthValidator = Joi.object({
     'string.max': `Name should have a maximum length of {#limit}`,
     'any.required': `Name is required`,
   }),
-  password: Joi.string().required().messages({
+  password: Joi.string().required().min(8).messages({
     'number.base': `Password must be a string`,
     'number.empty': `Password cannot be empty`,
     'any.required': `Password is required`,
+    'string.min': `Name should have a minimum length of {#limit}`,
   }),
   userType: Joi.string().valid('admin', 'user').required().messages({
     'string.base': 'User Type must be a string',
@@ -27,22 +28,6 @@ const AuthValidator = Joi.object({
     'any.only': 'User Type must be one of "admin", "user", or "guest"',
   })
 
-  // image: Joi.object({
-  //   fieldname: Joi.string().valid('image').required(),
-  //   originalname: Joi.string().required(),
-  //   encoding: Joi.string().required(),
-  //   mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/gif').required(),
-  //   destination: Joi.string().required(),
-  //   filename: Joi.string().required(),
-  //   path: Joi.string().required(),
-  //   size: Joi.number().integer().min(1).required(),
-  // }).required().messages({
-  //   'object.base': `Profile Image must be an object`,
-  //   'any.required': `Profile Image is required`,
-  //   'string.valid': `Invalid fieldname for Profile Image`,
-  //   'string.empty': `Fieldname for media cannot be empty`,
-  //   'string.valid': `Invalid mimetype for media`,
-  // }),
 });
 
 module.exports = { AuthValidator }
